@@ -1,0 +1,2 @@
+Q1 ---> [Join t1 t2, Join t2 t3, Project t3, GroupBy t1]
+RQ1---> [Join t1 t2, Join t1 t3, Join t2 temp3, Project t3, GroupBy t1]
