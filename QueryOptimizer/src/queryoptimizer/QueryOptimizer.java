@@ -1,9 +1,6 @@
 package queryoptimizer;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
 
 public class QueryOptimizer {
     public static double pageSize = 4000; //Bytes 
@@ -12,17 +9,48 @@ public class QueryOptimizer {
     
     
     public static void main(String[] args) {
-        String[] joinMethods = new String[]{"NLJ", "SNL", "BNL", "TNL", "SMJ", "HJM", "HJL"};
+        String[] joinMethods = new String[]{"NLJ"
+                //, "SNL", "BNL", "TNL", "SMJ", "HJM", "HJL"
+        };
         ArrayList<IntializeTableParams> tablesInfo = new ArrayList<>();
         tablesInfo.add(new IntializeTableParams("T1", 20, 1000));
         tablesInfo.add(new IntializeTableParams("T2", 20, 1000));
         tablesInfo.add(new IntializeTableParams("T3", 100, 2000));
         
-        Map<String, Double> firstJoin = new HashMap<String, Double>();
-        for(String joinMethod: joinMethods){
-            firstJoin.put(joinMethod, calculateJoinFunction(tablesInfo.get(0),tablesInfo.get(1), joinMethod));
+        Map<String, Double> firstJoin = new HashMap<>();
+        Map<String, Double> secondJoin = new HashMap<>();
+        int i=0;
+        for(IntializeTableParams firstTable: tablesInfo){
+            for(IntializeTableParams secondTable: tablesInfo){
+                if(firstTable != secondTable){
+                    System.out.println(firstTable);
+                    System.out.println(secondTable);
+                    for(String joinMethod: joinMethods){
+                        firstJoin.put(joinMethod, calculateJoinFunction(firstTable,secondTable, joinMethod));
+                    }
+                    for(String joinMethod: joinMethods){
+                        firstJoin.put(joinMethod, calculateJoinFunction(secondTable,firstTable, joinMethod));
+                    }
+                    for(IntializeTableParams thirdTable: tablesInfo){
+                        if(firstTable != thirdTable && secondTable != thirdTable){
+                            System.out.println(thirdTable);
+                            System.out.println("++++++++++++++++++++++++++++++++++++");
+                            for(String joinMethod: joinMethods){
+                                secondJoin.put(joinMethod, calculateJoinFunction(firstTable,thirdTable, joinMethod));
+                            }
+                            for(String joinMethod: joinMethods){
+                                secondJoin.put(joinMethod, calculateJoinFunction(thirdTable,firstTable, joinMethod));
+                            }
+                        }
+                    }    
+                }
+            }    
         }
+        System.out.println(i);
         System.out.println(firstJoin);
+        System.out.println(Collections.max(firstJoin.values()));
+        System.out.println(secondJoin);
+        System.out.println(Collections.max(secondJoin.values()));
     }
     
     public static double calculateJoinFunction(IntializeTableParams leftTable, 
@@ -51,10 +79,7 @@ public class QueryOptimizer {
                 break;
                 
         }
-        
         return joinCost;
-        
-        
     }
 }
 
