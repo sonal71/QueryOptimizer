@@ -48,9 +48,9 @@ public class QueryOptimizer {
         }
         System.out.println(i);
         System.out.println(firstJoin);
-        System.out.println(Collections.max(firstJoin.values()));
+        System.out.println(Collections.min(firstJoin.values()));
         System.out.println(secondJoin);
-        System.out.println(Collections.max(secondJoin.values()));
+        System.out.println(Collections.min(secondJoin.values()));
     }
     
     public static double calculateJoinFunction(IntializeTableParams leftTable, 
