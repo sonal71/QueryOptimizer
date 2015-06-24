@@ -12,26 +12,26 @@ public class QueryOptimizer {
     public static void main(String[] args) {
         String[] joinMethods = new String[]{"TNL", "PNL", "BNL", "SMJ", "HJM", "HJL"};
         String[] correlationJoinMethods = new String[]{"TNL", "PNL", "BNL"};
-        ArrayList<IntializeTable> tablesInfo = new ArrayList<>();
-        tablesInfo.add(new IntializeTable("T1", 20, 1000));
-        tablesInfo.add(new IntializeTable("T2", 20, 1000));
-        tablesInfo.add(new IntializeTable("T3", 100, 2000));
+        ArrayList<IntializeTableAnkur> tablesInfo = new ArrayList<>();
+        tablesInfo.add(new IntializeTableAnkur("T1", 20, 1000));
+        tablesInfo.add(new IntializeTableAnkur("T2", 20, 1000));
+        tablesInfo.add(new IntializeTableAnkur("T3", 100, 2000));
         double selectivity = 0.01;
         
         Map<String, Double> firstJoin = new HashMap<>();
         Map<String, Double> secondJoin = new HashMap<>();
-        for(IntializeTable firstTable: tablesInfo){
-            for(IntializeTable secondTable: tablesInfo){
+        for(IntializeTableAnkur firstTable: tablesInfo){
+            for(IntializeTableAnkur secondTable: tablesInfo){
                 if(firstTable != secondTable){
                     for(String joinMethod: joinMethods){
                         firstJoin.put(joinMethod, calculateJoinFunction(firstTable,secondTable, joinMethod));
                     }
                     
-                    IntializeTable temp1 = new IntializeTable("temp1", 
+                    IntializeTableAnkur temp1 = new IntializeTableAnkur("temp1", 
                                                                 firstTable.getTupleSize()+secondTable.getTupleSize(), 
                                                                 selectivity*firstTable.getPageCount()*secondTable.getPageCount());
                     System.out.println("("+firstTable.getTableName()+" join "+secondTable.getTableName()+") => temp1");
-                    for(IntializeTable thirdTable: tablesInfo){
+                    for(IntializeTableAnkur thirdTable: tablesInfo){
                         if(firstTable != thirdTable && secondTable != thirdTable){
                             System.out.println(temp1.getTableName()+" join "+thirdTable.getTableName());
                             for(String joinMethod: joinMethods){
@@ -52,8 +52,8 @@ public class QueryOptimizer {
         System.out.println(Collections.min(secondJoin.values()));
     }
     
-    public static double calculateJoinFunction(IntializeTable leftTable, 
-                                        IntializeTable rightTable, 
+    public static double calculateJoinFunction(IntializeTableAnkur leftTable, 
+                                        IntializeTableAnkur rightTable, 
                                         String joinMethod){
         double joinCost = 0;
         double joinIO = 0;
@@ -89,35 +89,5 @@ public class QueryOptimizer {
                 
         }
         return joinCost;
-    }
-}
-
-class IntializeTable {
-    String tableName;
-    double tupleCount;
-    double pageCount;
-    double tupleSize;
-    
-    public IntializeTable(String tableName, double tupleSize, double pageCount){
-        this.tableName = tableName;
-        this.pageCount = pageCount;
-        this.tupleSize = tupleSize;
-        this.tupleCount = pageCount*(QueryOptimizer.pageSize/tupleSize);
-    }
-    public String getTableName () {
-        return tableName;
-    }
-    public double getTuplesCount () {
-        return tupleCount;
-    }
-    public double getPageCount () {
-        return pageCount;
-    }
-    public double getTupleSize () {
-        return tupleSize;
-    }
-    @Override
-    public String toString () {
-        return "Table name: "+this.tableName+" Tuple count: "+this.tupleCount+" Page size: "+this.pageCount;
     }
 }
