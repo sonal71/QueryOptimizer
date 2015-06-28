@@ -47,9 +47,9 @@ public class QueryOptimizerAnkur {
                         co_flag = Integer.parseInt(params[4]);
                         selectivity = params[5];
                         if(co_flag == 1) {
-                            calculateJoinFunctionCorrelation(firstTable, secondTable, resultTable, selectivity);
+                        
                         }else {
-                            calculateJoinFunction(firstTable, secondTable, resultTable, selectivity);
+                        
                         }
                         // Call join method using above mentioned parameters
                         //System.out.println("Join "+firstTable+" "+secondTable+" "+resultTable+" "+co_flag+" "+selectivity);
@@ -77,26 +77,26 @@ public class QueryOptimizerAnkur {
             System.out.println("File Not Found");
         }
         System.exit(0);
-        ArrayList<IntializeTableAnkur> tablesInfo = new ArrayList<>();
-        tablesInfo.add(new IntializeTableAnkur("T1", 20, 1000));
-        tablesInfo.add(new IntializeTableAnkur("T2", 20, 1000));
-        tablesInfo.add(new IntializeTableAnkur("T3", 100, 2000));
+        ArrayList<InitializeTable> tablesInfo = new ArrayList<>();
+        tablesInfo.add(new InitializeTable("T1", 20, 1000));
+        tablesInfo.add(new InitializeTable("T2", 20, 1000));
+        tablesInfo.add(new InitializeTable("T3", 100, 2000));
         double selectivity = 0.01;
         
         Map<String, Double> firstJoin = new HashMap<>();
         Map<String, Double> secondJoin = new HashMap<>();
-        for(IntializeTableAnkur firstTable: tablesInfo){
-            for(IntializeTableAnkur secondTable: tablesInfo){
+        for(InitializeTable firstTable: tablesInfo){
+            for(InitializeTable secondTable: tablesInfo){
                 if(firstTable != secondTable){
                     for(String joinMethod: joinMethods){
                         firstJoin.put(joinMethod, calculateJoinFunction(firstTable,secondTable, joinMethod));
                     }
                     
-                    IntializeTableAnkur temp1 = new IntializeTableAnkur("temp1", 
+                    InitializeTable temp1 = new InitializeTable("temp1", 
                                                                 firstTable.tupleSize+secondTable.tupleSize, 
                                                                 selectivity*firstTable.pageCount*secondTable.pageCount);
                     System.out.println("("+firstTable.tableName+" join "+secondTable.tableName+") => temp1");
-                    for(IntializeTableAnkur thirdTable: tablesInfo){
+                    for(InitializeTable thirdTable: tablesInfo){
                         if(firstTable != thirdTable && secondTable != thirdTable){
                             System.out.println(temp1.tableName+" join "+thirdTable.tableName);
                             for(String joinMethod: joinMethods){
@@ -117,8 +117,8 @@ public class QueryOptimizerAnkur {
         System.out.println(Collections.min(secondJoin.values()));
     }
     
-    public static double calculateJoinFunctionCorrelation(IntializeTableAnkur leftTable, 
-                                        IntializeTableAnkur rightTable, 
+    public static double calculateJoinFunctionCorrelation(InitializeTable leftTable, 
+                                        InitializeTable rightTable, 
                                         String joinMethod, String s){
         double joinCost = 0;
         double joinIO = 0;
@@ -144,8 +144,8 @@ public class QueryOptimizerAnkur {
         return joinCost;
     }
     
-    public static double calculateJoinFunction(IntializeTableAnkur leftTable, 
-                                        IntializeTableAnkur rightTable, 
+    public static double calculateJoinFunction(InitializeTable leftTable, 
+                                        InitializeTable rightTable, 
                                         String joinMethod){
         double joinCost = 0;
         double joinIO = 0;
