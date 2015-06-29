@@ -10,7 +10,7 @@ public class QueryOptimizer {
     public static double diskAccessTime = 12; //ms
     
     public static void main(String[] args) throws FileNotFoundException {
-        String[] joinMethods = new String[]{"TNL", "PNL", "BNL", "SMJ", "HJM", "HJL"};
+        String[] joinMethods = new String[]{"TNL", "PNL", "SMJ", "BNL", "HJM", "HJL"};
         String[] correlationJoinMethods = new String[]{"TNL", "PNL", "BNL"};
         Double totalCost=0.0;
         
@@ -50,7 +50,6 @@ public class QueryOptimizer {
                         for(String joinMethod: joinMethods) {
                             tempMap.put(tablesInfo.get(params[1]).tableName+" join "+tablesInfo.get(params[2]).tableName+" "+joinMethod, 
                                     calculateJoinFunction(tablesInfo.get(params[1]), tablesInfo.get(params[2]), joinMethod));
-                            joinCost.put(i, tempMap);
                             tempMap.put(tablesInfo.get(params[2]).tableName+" join "+tablesInfo.get(params[1]).tableName+" "+joinMethod, 
                                     calculateJoinFunction(tablesInfo.get(params[2]), tablesInfo.get(params[1]), joinMethod));
                             joinCost.put(i, tempMap);
@@ -60,7 +59,6 @@ public class QueryOptimizer {
                         for(String joinMethod: correlationJoinMethods) {
                             tempMap.put(tablesInfo.get(params[1]).tableName+" join "+tablesInfo.get(params[2]).tableName+" "+joinMethod, 
                                     calculateJoinFunction(tablesInfo.get(params[1]), tablesInfo.get(params[2]), joinMethod));
-                            joinCost.put(i, tempMap);
                             tempMap.put(tablesInfo.get(params[2]).tableName+" join "+tablesInfo.get(params[1]).tableName+" "+joinMethod, 
                                     calculateJoinFunction(tablesInfo.get(params[2]), tablesInfo.get(params[1]), joinMethod));
                             joinCost.put(i, tempMap);
@@ -86,33 +84,53 @@ public class QueryOptimizer {
                     break;
                 case "##": //To indicate ending of query
                     ArrayList<Object> tempArrayList = new ArrayList<>();
+                    System.out.println(joinCost.get(0));
                     for(int j=0;j<i;j++) {    
-                        tempArrayList.add(((HashMap<Integer, Map<String, Double>>) joinCost).clone());
+                        System.out.println(joinCost.get(j).values().getClass());
                         Double bestJoin = Collections.min(joinCost.get(j).values());
                         Set<String> joinKeys = joinCost.get(j).keySet();
                         for(String key: joinKeys) {
                             if(Objects.equals(joinCost.get(j).get(key), bestJoin)){
-                                System.out.println(key+" :"+joinCost.get(j).get(key));
+                                System.out.println(key);
                                 totalCost += Collections.min(joinCost.get(j).values());
+                                Map<String, Double> bestJoinPlan = new HashMap<>();
+                                bestJoinPlan.put(key, Collections.min(joinCost.get(j).values()));
+                                tempArrayList.add(((HashMap<String, Double>) bestJoinPlan).clone());
                                 break;
                             }
                         }
                     }
                     for(i=0;i<1;i++){
-                        tempArrayList.add(((HashMap<Integer, Map<String, Double>>) projectionCost).clone());
                         Set<String> projectionKeys = projectionCost.get(i).keySet();
                         for(String key: projectionKeys) {
-                            System.out.println(projectionCost.get(i));
+                            tempArrayList.add(((HashMap<String, Double>) projectionCost.get(i)).clone());
+                            String str = projectionCost.get(i).toString();
+                            str = str.substring(1, str.indexOf('='));
+                            System.out.println(str);
                             totalCost += projectionCost.get(i).get(key);
                         }
                     }
-                    for(i=0;i<1;i++){
-                        tempArrayList.add(((HashMap<Integer, Map<String, Double>>) groupByCost).clone());
-                        Set<String> groupByKeys = groupByCost.get(i).keySet();
+                    String comapareGroupBy = tempArrayList.toString();
+                    if(comapareGroupBy.contains("SMJ")){
+                        Set<String> groupByKeys = groupByCost.get(0).keySet();
                         for(String key: groupByKeys) {
-                            System.out.println(groupByCost.get(i));
-                            totalCost += groupByCost.get(i).get(key);
+                            totalCost += groupByCost.get(0).get(key);
                         }
+                        tempArrayList.add(((HashMap<String, Double>) groupByCost.get(0)).clone());
+                        String str = groupByCost.get(0).toString();
+                        str = str.substring(1, str.indexOf('='));
+                        System.out.println(str);
+                        
+                    } else {
+                        Set<String> groupByKeys = groupByCost.get(1).keySet();
+                        for(String key: groupByKeys) {
+                            totalCost += groupByCost.get(1).get(key);
+                        }
+                        tempArrayList.add(((HashMap<String, Double>) groupByCost.get(1)).clone());
+                        String groupBystr = groupByCost.get(1).toString();
+                        groupBystr = groupBystr.substring(1, groupBystr.indexOf('='));
+                        System.out.println(groupBystr);
+                        
                     }
                     currentPlan.put(currentQuery, tempArrayList);
                     joinCost.clear();
@@ -128,9 +146,21 @@ public class QueryOptimizer {
                     break;
             }
         }
-        Set<String> currentPlanKey = currentPlan.keySet();
-        for(String key: currentPlanKey) {
-            System.out.println(key+" :"+currentPlan.get(key));
+        Double bestQueryCost = Collections.min(totalCostQuery.values());
+        Set<String> bestPlanKeys = totalCostQuery.keySet();
+        for(String key: bestPlanKeys) {
+            if(Objects.equals(totalCostQuery.get(key), bestQueryCost)){
+                System.out.println("------------Best Plan------------\n");
+                System.out.print("---------------"+key+"---------------\n");
+                for(i=0; i<currentPlan.get(key).size();i++){
+                    String str= currentPlan.get(key).get(i).toString();
+                    str = str.substring(1, str.indexOf('='));
+                    System.out.println(str);
+                }
+                System.out.println("# of Disk I/O's :"+Math.round(bestQueryCost/0.012));
+                System.out.println("Processing time (Hr:mm:ss) :"+Math.round(bestQueryCost/3600)+":"+Math.round((bestQueryCost%3600)/60)+":"+Math.round((bestQueryCost%60)));
+                    
+            }
         }
     }
     
@@ -187,6 +217,7 @@ public class QueryOptimizer {
         return groupByCost;
     }
 }
+
 class InitializeTable {
     String tableName;
     double tupleCount;
