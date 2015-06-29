@@ -12,20 +12,22 @@ public class QueryOptimizer {
     public static void main(String[] args) throws FileNotFoundException {
         String[] joinMethods = new String[]{"TNL", "PNL", "BNL", "SMJ", "HJM", "HJL"};
         String[] correlationJoinMethods = new String[]{"TNL", "PNL", "BNL"};
+        Double totalCost=0.0;
         
         Map<String, InitializeTable> tablesInfo = new HashMap<>();
         File file = new File("src/queryoptimizer/inputAnkur.txt");
         Scanner input = new Scanner(file);
-        String line = input.nextLine();
+        String line = input.nextLine(), currentQuery="";
         while(input.hasNextLine() && !line.equals("###")) {
             String[] tableInfo = line.split(" ");
             tablesInfo.put(tableInfo[0], new InitializeTable(tableInfo[0], Double.parseDouble(tableInfo[1]), Double.parseDouble(tableInfo[2])));
             line = input.nextLine();
         }
-        
         Map<Integer, Map<String, Double>> joinCost = new HashMap<>();
-        Map<String, Double> projectionCost = new HashMap<>();
-        Map<String, Double> groupByCost = new HashMap<>();
+        Map<Integer, Map<String, Double>> projectionCost = new HashMap<>();
+        Map<Integer, Map<String, Double>> groupByCost = new HashMap<>();
+        
+        Map<String, Double> totalCostQuery = new HashMap<>();
         
         Double selectivity;
         int co_flag,i=0;
@@ -35,29 +37,29 @@ public class QueryOptimizer {
             params = line.split(" ");
             switch(params[0]) {
                 case "Q": // Starting of new query
-                    String currentQuery = params[1];
+                    currentQuery = params[1];
                     System.out.println("---------------"+currentQuery+"---------------");
                     break;
                 case "J": // Joins
                     Map<String, Double> tempMap = new HashMap<>();
                     co_flag = Integer.parseInt(params[4]);
                     selectivity = Double.parseDouble(params[5]);
-                    if(co_flag == 1) {
+                    if(co_flag == 0) {
                         for(String joinMethod: joinMethods) {
-                            tempMap.put(tablesInfo.get(params[1]).tableName+" join "+tablesInfo.get(params[2]).tableName+". Join Method used: "+joinMethod, 
+                            tempMap.put(tablesInfo.get(params[1]).tableName+" join "+tablesInfo.get(params[2]).tableName+" "+joinMethod, 
                                     calculateJoinFunction(tablesInfo.get(params[1]), tablesInfo.get(params[2]), joinMethod));
                             joinCost.put(i, tempMap);
-                            tempMap.put(tablesInfo.get(params[2]).tableName+" join "+tablesInfo.get(params[1]).tableName+". Join Method used: "+joinMethod, 
+                            tempMap.put(tablesInfo.get(params[2]).tableName+" join "+tablesInfo.get(params[1]).tableName+" "+joinMethod, 
                                     calculateJoinFunction(tablesInfo.get(params[2]), tablesInfo.get(params[1]), joinMethod));
                             joinCost.put(i, tempMap);
                         }
                         i++;
                     } else {
                         for(String joinMethod: correlationJoinMethods) {
-                            tempMap.put(tablesInfo.get(params[1]).tableName+" join "+tablesInfo.get(params[2]).tableName+". Join Method used: "+joinMethod, 
+                            tempMap.put(tablesInfo.get(params[1]).tableName+" join "+tablesInfo.get(params[2]).tableName+" "+joinMethod, 
                                     calculateJoinFunction(tablesInfo.get(params[1]), tablesInfo.get(params[2]), joinMethod));
                             joinCost.put(i, tempMap);
-                            tempMap.put(tablesInfo.get(params[2]).tableName+" join "+tablesInfo.get(params[1]).tableName+". Join Method used: "+joinMethod, 
+                            tempMap.put(tablesInfo.get(params[2]).tableName+" join "+tablesInfo.get(params[1]).tableName+" "+joinMethod, 
                                     calculateJoinFunction(tablesInfo.get(params[2]), tablesInfo.get(params[1]), joinMethod));
                             joinCost.put(i, tempMap);
                         }
@@ -68,33 +70,56 @@ public class QueryOptimizer {
                                         selectivity*tablesInfo.get(params[1]).pageCount*tablesInfo.get(params[2]).pageCount));
                     break;
                 case "P": // Projection
-                    System.out.println("Project "+params[1]);
+                    Map<String, Double> tempProjectMap = new HashMap<>();
+                    tempProjectMap.put("Project "+params[1], calculateProjectFunction(tablesInfo.get(params[1])));
+                    projectionCost.put(0, tempProjectMap);
                     break;
                 case "G": //Group By
-                    System.out.println("Group by "+params[1]);
+                    Map<String, Double> tempGroupByMapSorted = new HashMap<>();
+                    tempGroupByMapSorted.put("GroupBy on "+params[1], calculateGroupByFunction(tablesInfo.get(params[1]), "SMJ"));
+                    groupByCost.put(0, tempGroupByMapSorted);
+                    Map<String, Double> tempGroupByMap = new HashMap<>();
+                    tempGroupByMap.put("GroupBy on "+params[1], calculateGroupByFunction(tablesInfo.get(params[1]), ""));
+                    groupByCost.put(1, tempGroupByMap);
                     break;
                 case "##": //To indicate ending of query
                     for(int j=0;j<i;j++) {    
                         Double bestJoin = Collections.min(joinCost.get(j).values());
-                        Set<String> keys = joinCost.get(j).keySet();
-                        for(String key: keys) {
+                        Set<String> joinKeys = joinCost.get(j).keySet();
+                        for(String key: joinKeys) {
                             if(Objects.equals(joinCost.get(j).get(key), bestJoin)){
                                 System.out.println(key+" :"+joinCost.get(j).get(key));
+                                totalCost += Collections.min(joinCost.get(j).values());
                                 break;
                             }
+                        }
+                    }
+                    for(i=0;i<1;i++){
+                        Set<String> projectionKeys = projectionCost.get(i).keySet();
+                        for(String key: projectionKeys) {
+                            System.out.println(projectionCost.get(i));
+                            totalCost += projectionCost.get(i).get(key);
+                        }
+                    }
+                    for(i=0;i<1;i++){
+                        Set<String> groupByKeys = groupByCost.get(i).keySet();
+                        for(String key: groupByKeys) {
+                            System.out.println(groupByCost.get(i));
+                            totalCost += groupByCost.get(i).get(key);
                         }
                     }
                     joinCost.clear();
                     projectionCost.clear();
                     groupByCost.clear();
+                    System.out.println("# of Disk I/O's :"+Math.round(totalCost/0.012));
+                    System.out.println("Processing time (Hr) :"+Math.round(totalCost/3600));
+                    totalCostQuery.put(currentQuery, totalCost);
                     i=0;
                     break;
                 default:
                     break;
             }
         }
-        System.out.println(tablesInfo);
-                
     }
     
     public static double calculateJoinFunction(InitializeTable leftTable, 
@@ -105,10 +130,6 @@ public class QueryOptimizer {
         switch(joinMethod){
             case "TNL":
                 joinIO = leftTable.pageCount + (leftTable.tupleCount * leftTable.pageCount * rightTable.pageCount);
-                joinCost = (joinIO * QueryOptimizer.diskAccessTime)/1000;
-                break;
-            case "NLJ":
-                joinIO = leftTable.pageCount + (leftTable.pageCount * leftTable.tupleCount* 1.2); //1.2: Cost of find matching index tuples
                 joinCost = (joinIO * QueryOptimizer.diskAccessTime)/1000;
                 break;
             case "PNL":
@@ -131,9 +152,27 @@ public class QueryOptimizer {
                 joinIO = 2 * 3 * (leftTable.pageCount + rightTable.pageCount);
                 joinCost = (joinIO * QueryOptimizer.diskAccessTime)/1000;
                 break;
-                
         }
         return joinCost;
+    }
+    public static double calculateProjectFunction(InitializeTable table) {
+        double projectCost = 0;
+        double projectIO = 0;
+        projectIO = Math.log10(table.pageCount) +3 *table.pageCount;
+        projectCost = (projectIO * QueryOptimizer.diskAccessTime)/1000;
+        return projectCost;
+    }
+    public static double calculateGroupByFunction(InitializeTable table, String joinMethod) {
+        double groupByCost = 0;
+        double groupByIO = 0;
+        if(joinMethod.equals("SMJ")){
+            groupByIO = 2 * table.pageCount;
+            groupByCost = (groupByIO * QueryOptimizer.diskAccessTime)/1000;
+        } else {
+            groupByIO = 2 * table.pageCount + (table.pageCount * Math.log10(table.pageCount));
+            groupByCost = (groupByIO * QueryOptimizer.diskAccessTime)/1000;
+        }
+        return groupByCost;
     }
 }
 class InitializeTable {
