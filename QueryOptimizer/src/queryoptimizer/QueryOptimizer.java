@@ -27,6 +27,8 @@ public class QueryOptimizer {
         Map<Integer, Map<String, Double>> projectionCost = new HashMap<>();
         Map<Integer, Map<String, Double>> groupByCost = new HashMap<>();
         
+        Map<String, Map<Integer, Map<String, Double>>> currentPlan = new HashMap<>();
+        
         Map<String, Double> totalCostQuery = new HashMap<>();
         
         Double selectivity;
@@ -88,6 +90,7 @@ public class QueryOptimizer {
                         Set<String> joinKeys = joinCost.get(j).keySet();
                         for(String key: joinKeys) {
                             if(Objects.equals(joinCost.get(j).get(key), bestJoin)){
+                                currentPlan.put(currentQuery, joinCost);
                                 System.out.println(key+" :"+joinCost.get(j).get(key));
                                 totalCost += Collections.min(joinCost.get(j).values());
                                 break;
@@ -112,14 +115,16 @@ public class QueryOptimizer {
                     projectionCost.clear();
                     groupByCost.clear();
                     System.out.println("# of Disk I/O's :"+Math.round(totalCost/0.012));
-                    System.out.println("Processing time (Hr) :"+Math.round(totalCost/3600));
+                    System.out.println("Processing time (Hr:mm:ss) :"+Math.round(totalCost/3600)+":"+Math.round((totalCost%3600)/60)+":"+Math.round((totalCost%60)));
                     totalCostQuery.put(currentQuery, totalCost);
+                    totalCost=0.0;
                     i=0;
                     break;
                 default:
                     break;
             }
         }
+        System.out.println(currentPlan);
     }
     
     public static double calculateJoinFunction(InitializeTable leftTable, 
