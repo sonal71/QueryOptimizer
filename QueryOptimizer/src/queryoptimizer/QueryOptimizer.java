@@ -27,7 +27,7 @@ public class QueryOptimizer {
         Map<Integer, Map<String, Double>> projectionCost = new HashMap<>();
         Map<Integer, Map<String, Double>> groupByCost = new HashMap<>();
         
-        Map<String, Map<Integer, Map<String, Double>>> currentPlan = new HashMap<>();
+        Map<String, ArrayList<Object>> currentPlan = new HashMap<>();
         
         Map<String, Double> totalCostQuery = new HashMap<>();
         
@@ -85,12 +85,13 @@ public class QueryOptimizer {
                     groupByCost.put(1, tempGroupByMap);
                     break;
                 case "##": //To indicate ending of query
+                    ArrayList<Object> tempArrayList = new ArrayList<>();
                     for(int j=0;j<i;j++) {    
+                        tempArrayList.add(((HashMap<Integer, Map<String, Double>>) joinCost).clone());
                         Double bestJoin = Collections.min(joinCost.get(j).values());
                         Set<String> joinKeys = joinCost.get(j).keySet();
                         for(String key: joinKeys) {
                             if(Objects.equals(joinCost.get(j).get(key), bestJoin)){
-                                currentPlan.put(currentQuery, joinCost);
                                 System.out.println(key+" :"+joinCost.get(j).get(key));
                                 totalCost += Collections.min(joinCost.get(j).values());
                                 break;
@@ -98,6 +99,7 @@ public class QueryOptimizer {
                         }
                     }
                     for(i=0;i<1;i++){
+                        tempArrayList.add(((HashMap<Integer, Map<String, Double>>) projectionCost).clone());
                         Set<String> projectionKeys = projectionCost.get(i).keySet();
                         for(String key: projectionKeys) {
                             System.out.println(projectionCost.get(i));
@@ -105,12 +107,14 @@ public class QueryOptimizer {
                         }
                     }
                     for(i=0;i<1;i++){
+                        tempArrayList.add(((HashMap<Integer, Map<String, Double>>) groupByCost).clone());
                         Set<String> groupByKeys = groupByCost.get(i).keySet();
                         for(String key: groupByKeys) {
                             System.out.println(groupByCost.get(i));
                             totalCost += groupByCost.get(i).get(key);
                         }
                     }
+                    currentPlan.put(currentQuery, tempArrayList);
                     joinCost.clear();
                     projectionCost.clear();
                     groupByCost.clear();
@@ -124,7 +128,10 @@ public class QueryOptimizer {
                     break;
             }
         }
-        System.out.println(currentPlan);
+        Set<String> currentPlanKey = currentPlan.keySet();
+        for(String key: currentPlanKey) {
+            System.out.println(key+" :"+currentPlan.get(key));
+        }
     }
     
     public static double calculateJoinFunction(InitializeTable leftTable, 
